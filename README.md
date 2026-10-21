@@ -62,7 +62,19 @@ Phase 05 将「总览」升级为可自定义的全局工作台，并在同一�
 - 模块数据范围有「继承场景」「全局数据」「自定义筛选」三种：自定义规则整体替代场景规则，不叠加；已保存的任务视图是完整规则集，选中后模块固定为自定义范围。页面显示筛选来源。
 - 工作台查询按整块板合并可见日期窗口并限制在回溯 180 天、前瞻 365 天、最长 550 天内；一次板级查询供所有模块复用，不为每个模块单独查询数据库。
 - JSON 备份升级为 v2，新增工作台、模块布局、任务视图与筛选规则；v1 文件仍可导入并在缺少全局工作台时补建一个。合并按 UUID 幂等，替换恢复先写安全备份，未知未来模块与非法引用在写入前校验。
-- V5 Schema 只新增 `Workspace`、`WorkspaceModule`、`SavedTaskView`，历史 V1–V4 模型未原地修改；V4 → V5 为轻量迁移，默认全局工作台在迁移完成后的启动流程中幂等写入。
+- V5 Schema 只新增 `Workspace`、`WorkspaceModule`、`SavedTaskView`，V4 → V5 为轻量迁移，默认全局工作台在迁移完成后的启动流程中幂等写入。V4 与 V5 当前仍复用可变模型类的遗留问题见 Phase 05.5 报告；后续改字段前应先补齐 V5 的冻结定义。
+
+## Phase 05.5：安全、质量与性能审计
+
+本轮没有新增业务模型或 Schema 版本，集中处理仓库卫生、测试隔离、备份导入安全、查询性能和可重复验证。
+
+- 仓库新增 `.gitattributes`、`CONTRIBUTING.md`、`SECURITY.md` 与 `.github/workflows/ci.yml`；`.gitignore` 精确覆盖构建产物、SQLite 旁文件、备份 JSON、密钥和签名材料，不忽略源码目录或全部 JSON/PNG。
+- 测试存储选择改为 fail-closed：带 `--selno-ui-testing` 时必须提供合法的 `SELNO_UI_TEST_STORE_ID` 才使用独立磁盘库，缺失或非法时拒绝启动；XCTest 宿主使用内存库，普通启动才使用正式库。该逻辑在 Debug 与 Release 都生效，不依赖 `#if DEBUG`。
+- Release 构建保留 Hardened Runtime，移除了 `get-task-allow`；当前仍为 ad-hoc 签名，App Sandbox entitlement 与正式分发签名仍需仓库所有者决定。
+- 性能改动均有 10,000 任务合成数据的前后测量：收件箱快照限制 4 条并用 `fetchCount` 计数；任务筛选把日历与日期区间计算提升到每次遍历一次；备份日期编解码复用格式器；工作台不再构建被丢弃的月历投影。
+- 单元测试、迁移、备份、筛选和性能回归已纳入 CI 的可重复命令。UI 测试因依赖可交互窗口，默认仅在手动触发时运行。
+
+完整的 Git 扫描、敏感信息审计、性能数字、测试结果和遗留风险见 `Docs/Phase055-Report.md`。
 
 ## 运行与导航
 
@@ -90,7 +102,7 @@ Phase 05 将「总览」升级为可自定义的全局工作台，并在同一�
 
 时间区间使用半开语义 `[startsAt, endsAt)`：跨午夜事件按与日期区间实际相交的天展示，午夜结束不会多算次日。零时长定时日程归入开始时间所在日。全天表单的结束日期包含当天，保存时转换为该结束日期次日的本地午夜；再次编辑会反向转换，不会每次保存都延长一天。定时日程结束不能早于开始。
 
-正式文件位于应用沙盒 Application Support 下的 `Selno/Selno.store`。主 context 关闭自动保存，由 Service 明确保存；失败时回滚并显示错误。启动失败提供错误信息与重试，保留原数据库。
+正式文件位于当前进程 Application Support 目录下的 `Selno/Selno.store`；Debug 构建启用 App Sandbox，因此位于应用容器内。Release 的签名与沙盒配置仍待正式分发前处理，详见 Phase 05.5 报告。主 context 关闭自动保存，由 Service 明确保存；失败时回滚并显示错误。启动失败提供错误信息与重试，保留原数据库。
 
 ## 日历模块
 
@@ -152,7 +164,7 @@ V4 为 `TodoTask` 增加可选 `archivedAt`，并新增 `TaskReminder`（任务 
 
 项目与分类删除使用 nullify，保留任务；任务对子任务使用 cascade。默认分类继续通过固定 UUID 和数据库内 `SeedRecord` 幂等初始化。不使用删除数据库、清理记录或关闭持久化来处理升级问题。
 
-后续修改已发布的持久化字段前，应冻结完整的 V3 定义，再增加新版本及迁移测试，不能原地修改历史 schema。
+后续修改已发布的持久化字段前，应冻结完整的当前版本（V5）定义，再增加新版本及迁移测试，不能原地修改历史 schema。V4 与 V5 当前共用可变模型类的遗留问题已记录在 Phase 05.5 报告，属于下一轮 Schema 工作的前置项。
 
 ## 构建与测试
 
@@ -170,10 +182,12 @@ xcodebuild build -project Selno.xcodeproj -scheme Selno \
 
 如果终端只选择了 Command Line Tools，在命令前设置 `DEVELOPER_DIR` 为完整 Xcode 的 `Contents/Developer` 即可，无需更改系统设置。
 
-共享 Scheme 为单元测试宿主设置 `SELNO_TESTING=1`，Debug 下使用内存库。每个数据测试再建立独立容器；磁盘及迁移测试使用临时目录。UI 测试通过 `--selno-ui-testing` 和随机 `SELNO_UI_TEST_STORE_ID` 使用专属磁盘文件，同一案例重启 App 时复用该文件，避免污染正式数据；替换导入的自动安全备份同样写入该测试库旁的 `UITests/<ID>/Backups`。测试存储选择只在 Debug 中启用。
+共享 Scheme 为单元测试宿主设置 `SELNO_TESTING=1`；无论 Debug 还是 Release，只要检测到 XCTest 宿主环境就使用内存库。每个数据测试再建立独立容器；磁盘及迁移测试使用临时目录。UI 测试通过 `--selno-ui-testing` 和随机 `SELNO_UI_TEST_STORE_ID` 使用专属磁盘文件，同一案例重启 App 时复用该文件，避免污染正式数据；替换导入的自动安全备份同样写入该测试库旁的 `UITests/<ID>/Backups`。测试存储选择不依赖 `DEBUG`；缺少 UI 测试标识时拒绝启动，而不是回退到正式库。
 
 Desktop 文件提供程序可能向生成的 `.app`、`.xctest` 或 `.framework` 写回 `com.apple.FinderInfo`，从而干扰签名。仅清理 `.build` 产物的对应扩展属性并重试；不要清理用户数据库、修改团队或禁用工程签名。参见 [Apple QA1940](https://developer.apple.com/library/archive/qa/qa1940/_index.html)。
 
 历史报告见 `Docs/Phase01-Report.md`、`Docs/Phase02-Report.md`、`Docs/Phase025-Report.md`、`Docs/Phase03-Report.md`。Phase 04 的 JSON 格式、通知行为、迁移与真实持久化验证、构建与测试结果见 `Docs/Phase04-Report.md`。Phase 05 的工作台架构、V5 迁移、布局与筛选规则、构建与测试状态见 `Docs/Phase05-Report.md`。
 
 Phase 04 测试结果：单元 87/87 通过，UI 16/16 通过（含原生保存／打开面板的导出 → 替换 → 重启验收）。Phase 05 在 2026-10-21 的最终单元测试为 136/136 通过（18 个 Suite，其中 Phase 05 49 条，布局覆盖 10／30／100 个模块）；UI 测试 20 次执行 0 失败，其中 Phase 05 4/4、既有回归 16/16。真实运行截图见 `Docs/Phase05Screenshots/`，完整结果、构建日志与遗留风险见 `Docs/Phase05-Report.md`。此外，本轮在正式库的离线副本上实际执行了 V4 → V5 迁移，业务行数与种子幂等性通过；副本含个人数据，验收后已删除，未写入仓库。
+
+Phase 05.5 测试结果（2026-10-22）：最终 Debug 构建上 143 个 Swift Testing 用例（21 个 Suite）+ 3 个 XCTest 性能用例全部通过，共 146 条、0 失败；全量 UI 测试 20/20 通过、0 失败（910.386 秒）。最终源码的 Release 通用二进制为 `x86_64 arm64`，`codesign --verify --deep --strict` 通过，Hardened Runtime 开启，无 `get-task-allow` 与 entitlement，仍为 ad-hoc 签名且未公证。安全、仓库、导入边界、性能基线与未完成的人工验收项见 `Docs/Phase055-Report.md`。
