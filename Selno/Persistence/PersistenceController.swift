@@ -15,13 +15,41 @@ enum PersistenceController {
         .appendingPathComponent("Selno.store")
     }
 
+    /// Selects an isolated store for UI tests and for any XCTest host.
+    ///
+    /// This decision deliberately does not depend on `DEBUG`: a Release test
+    /// build must never fall through to the user's real Application Support
+    /// store. The arguments and environment are injectable so the decision can
+    /// be tested without mutating the current process.
+    static func launchStorage(
+        arguments: [String] = ProcessInfo.processInfo.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) throws -> Storage {
+        if arguments.contains("--selno-ui-testing") {
+            guard let value = environment["SELNO_UI_TEST_STORE_ID"],
+                  let id = UUID(uuidString: value) else {
+                throw PersistenceError.invalidUITestStore
+            }
+            let root = try localStoreURL().deletingLastPathComponent()
+            return .disk(root.appendingPathComponent("UITests", isDirectory: true)
+                .appendingPathComponent(id.uuidString, isDirectory: true)
+                .appendingPathComponent("Selno.store"))
+        }
+        if environment["SELNO_TESTING"] == "1"
+            || environment["XCTestConfigurationFilePath"] != nil
+            || environment["XCTestBundlePath"] != nil
+            || environment["XCTestSessionIdentifier"] != nil {
+            return .inMemory
+        }
+        return .local
+    }
+
     /// Logical JSON backups written before a destructive "replace" import.
     /// UI tests use a folder beside their own store, so test rows never appear
     /// among the real automatic backups.
     static func automaticBackupDirectoryURL() throws -> URL {
         var directory = try applicationSupportDirectory()
             .appendingPathComponent("Selno", isDirectory: true)
-        #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--selno-ui-testing"),
            let value = ProcessInfo.processInfo.environment["SELNO_UI_TEST_STORE_ID"],
            let id = UUID(uuidString: value) {
@@ -29,7 +57,6 @@ enum PersistenceController {
                 .appendingPathComponent("UITests", isDirectory: true)
                 .appendingPathComponent(id.uuidString, isDirectory: true)
         }
-        #endif
         return directory.appendingPathComponent("Backups", isDirectory: true)
     }
 

@@ -36,13 +36,13 @@ nonisolated enum BackupCodec {
     static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        encoder.dateEncodingStrategy = BackupDateCoding.encodingStrategy
+        encoder.dateEncodingStrategy = BackupDateCoding.makeEncodingStrategy()
         return encoder
     }
 
     static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = BackupDateCoding.decodingStrategy
+        decoder.dateDecodingStrategy = BackupDateCoding.makeDecodingStrategy()
         return decoder
     }
 
@@ -95,7 +95,29 @@ nonisolated enum BackupCodec {
         }
     }
 
+    /// Decoding a 128 MiB JSON file can still expand into a very large object
+    /// graph. These generous ceilings keep a malformed or hostile file from
+    /// turning validation and insertion into an unbounded main-thread operation.
+    private enum Limits {
+        static let projects = 50_000
+        static let tags = 50_000
+        static let templates = 50_000
+        static let tasks = 100_000
+        static let events = 100_000
+        static let reminders = 200_000
+        static let savedViews = 10_000
+        static let totalRecords = 500_000
+    }
+
     private static func validate(_ data: SelnoBackupData) throws {
+        try requireCount(data.projects.count, maximum: Limits.projects, label: "项目")
+        try requireCount(data.tags.count, maximum: Limits.tags, label: "标签")
+        try requireCount(data.templates.count, maximum: Limits.templates, label: "模板")
+        try requireCount(data.tasks.count, maximum: Limits.tasks, label: "任务")
+        try requireCount(data.events.count, maximum: Limits.events, label: "日程")
+        try requireCount(data.reminders.count, maximum: Limits.reminders, label: "提醒")
+        try requireCount(data.savedViews.count, maximum: Limits.savedViews, label: "任务视图")
+
         let projectIDs = try uniqueIDs(data.projects.map(\.id), entity: "项目")
         let tagIDs = try uniqueIDs(data.tags.map(\.id), entity: "标签")
         _ = try uniqueIDs(data.templates.map(\.id), entity: "模板")
@@ -306,6 +328,11 @@ nonisolated enum BackupCodec {
                                label: "任务视图 \(shortID(view.id)) 的原始筛选")
             try validateFilter(view.filter, label: "任务视图 \(shortID(view.id))")
         }
+        let totalRecords = data.projects.count + data.tags.count + data.templates.count
+            + data.tasks.count + data.events.count + data.reminders.count
+            + data.workspaces.count + data.savedViews.count
+            + stepIDs.count + instanceIDs.count + milestoneIDs.count + moduleIDs.count
+        try requireCount(totalRecords, maximum: Limits.totalRecords, label: "记录总数")
         _ = taskIDs
     }
 
@@ -333,6 +360,12 @@ nonisolated enum BackupCodec {
             throw BackupError.invalidData("备份中包含重复的\(entity)标识。")
         }
         return unique
+    }
+
+    private static func requireCount(_ count: Int, maximum: Int, label: String) throws {
+        guard count <= maximum else {
+            throw BackupError.invalidData("备份中的\(label)数量 \(count) 超过上限 \(maximum)。")
+        }
     }
 
     private static func requireFinite(_ date: Date, _ label: String) throws {

@@ -14,7 +14,7 @@ final class AppBootstrap {
 
     func load() {
         do {
-            let container = try PersistenceController.makeContainer(storage: launchStorage())
+            let container = try PersistenceController.makeContainer(storage: PersistenceController.launchStorage())
             try DefaultDataSeeder.seedIfNeeded(in: container.mainContext)
             try TemplatePresets.seed(in: container.mainContext)
             // Idempotent: creates the global workspace on the first Phase 05 launch
@@ -33,24 +33,4 @@ final class AppBootstrap {
         }
     }
 
-    private func launchStorage() throws -> PersistenceController.Storage {
-        #if DEBUG
-        let process = ProcessInfo.processInfo
-        if process.arguments.contains("--selno-ui-testing") {
-            guard let value = process.environment["SELNO_UI_TEST_STORE_ID"],
-                  let id = UUID(uuidString: value) else {
-                throw PersistenceError.invalidUITestStore
-            }
-            let root = try PersistenceController.localStoreURL().deletingLastPathComponent()
-            return .disk(root.appendingPathComponent("UITests", isDirectory: true)
-                .appendingPathComponent(id.uuidString, isDirectory: true)
-                .appendingPathComponent("Selno.store"))
-        }
-        if process.environment["SELNO_TESTING"] == "1"
-            || process.environment["XCTestConfigurationFilePath"] != nil {
-            return .inMemory
-        }
-        #endif
-        return .local
     }
-}

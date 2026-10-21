@@ -623,34 +623,30 @@ nonisolated enum SelnoBackupMetadata {
 nonisolated enum BackupDateCoding {
     static let epoch = Date(timeIntervalSince1970: 0)
 
-    static func string(from date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        return formatter.string(from: date)
-    }
-
-    static func date(from string: String) -> Date? {
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: string) { return date }
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: string)
-    }
-
-    static var encodingStrategy: JSONEncoder.DateEncodingStrategy {
-        .custom { date, encoder in
+    /// One formatter is created per codec, not per date. A backup with 10,000
+    /// tasks contains tens of thousands of dates; allocating an
+    /// `ISO8601DateFormatter` for each one dominated encode/decode time.
+    static func makeEncodingStrategy() -> JSONEncoder.DateEncodingStrategy {
+        let style = Date.ISO8601FormatStyle(
+            includingFractionalSeconds: true,
+            timeZone: TimeZone(secondsFromGMT: 0) ?? .gmt
+        )
+        return .custom { date, encoder in
             var container = encoder.singleValueContainer()
-            try container.encode(string(from: date))
+            try container.encode(date.formatted(style))
         }
     }
 
-    static var decodingStrategy: JSONDecoder.DateDecodingStrategy {
-        .custom { decoder in
+    static func makeDecodingStrategy() -> JSONDecoder.DateDecodingStrategy {
+        let fractional = Date.ISO8601FormatStyle(
+            includingFractionalSeconds: true,
+            timeZone: TimeZone(secondsFromGMT: 0) ?? .gmt
+        )
+        let plain = Date.ISO8601FormatStyle(timeZone: TimeZone(secondsFromGMT: 0) ?? .gmt)
+        return .custom { decoder in
             let container = try decoder.singleValueContainer()
             let value = try container.decode(String.self)
-            guard let date = date(from: value) else {
+            guard let date = (try? fractional.parse(value)) ?? (try? plain.parse(value)) else {
                 throw DecodingError.dataCorruptedError(in: container, debugDescription: "无效的 ISO 8601 日期：\(value)")
             }
             return date
