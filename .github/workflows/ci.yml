@@ -1,0 +1,128 @@
+name: macOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_ui_tests:
+        description: "Run the full macOS UI test suite (requires an interactive session)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debug-unit-tests:
+    name: Debug build and unit tests
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Select the newest Xcode 26 toolchain available
+        run: |
+          set -euo pipefail
+          XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          if [ -n "$XCODE_APP" ]; then
+            sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+            echo "Selected $XCODE_APP"
+          else
+            echo "No Xcode 26 installation found; using the runner default."
+          fi
+          xcodebuild -version
+          swift --version
+
+      - name: Static secret and sensitive-file scan
+        run: |
+          set -euo pipefail
+          failed=0
+
+          if git ls-files | grep -E '(^|/)\.env(\.|$)|\.(p8|p12|pfx|key|pem|mobileprovision|provisionprofile)$'; then
+            echo "::error::A tracked file name matches a sensitive-file pattern. Remove it from the repository."
+            failed=1
+          fi
+
+          if git grep -IlE 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{36,}|AKIA[0-9A-Z]{16}' -- . ':!.github/workflows/ci.yml'; then
+            echo "::error::A tracked file contains a credential-like pattern. Inspect it privately; do not paste the value into CI logs."
+            failed=1
+          fi
+
+          exit "$failed"
+
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project Selno.xcodeproj \
+            -scheme Selno \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/SelnoDerivedData" \
+            -only-testing:SelnoTests
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project Selno.xcodeproj \
+            -scheme Selno \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/SelnoDerivedData" \
+            -only-testing:SelnoTests
+
+  manual-ui-tests:
+    name: Manual UI test run
+    if: github.event_name == 'workflow_dispatch' && inputs.run_ui_tests
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Select the newest Xcode 26 toolchain available
+        run: |
+          set -euo pipefail
+          XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          if [ -n "$XCODE_APP" ]; then
+            sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+            echo "Selected $XCODE_APP"
+          fi
+          xcodebuild -version
+
+      - name: Build UI tests
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project Selno.xcodeproj \
+            -scheme Selno \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/SelnoDerivedDataUI" \
+            -only-testing:SelnoUITests
+
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project Selno.xcodeproj \
+            -scheme Selno \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/SelnoDerivedDataUI" \
+            -only-testing:SelnoUITests
+
+# Notes:
+# - The UI suite drives real windows and menus. GitHub-hosted macOS runners may
+#   lack a usable interactive session; it is manual-trigger only for that reason.
+# - This workflow uploads no artifacts, so test screenshots, UI hierarchies and
+#   any local data never leave the runner.
+# - Secret scanning here is a defensive check, not a replacement for enabling
+#   GitHub Secret Scanning and Push Protection in repository settings. Those
+#   settings are owned by the repository administrator and are not changed by
+#   this workflow.
