@@ -155,7 +155,7 @@ git grep -n '/Users/' -- Docs README.md
 - 未使用 `pull_request_target`，不把 secrets 暴露给来自 fork 的代码。
 - 没有把 Token、环境变量或本地路径写入日志。
 - Action 使用版本标签固定，而不是 commit SHA。这比浮动 `@v4` 好，但仍不是最严格的 SHA 固定；属于待改进项。
-- 工作流没有在 GitHub 上实际执行；本地等价命令已执行并通过。远程 `origin/main` 已在提交前重新 fetch，确认没有分叉。
+- 本地等价命令已执行并通过。普通 push 会触发 GitHub Actions；本轮没有等待云端运行结果，因此不声明 CI 已在 GitHub 上通过。
 - GitHub 仓库的 Secret Scanning、Push Protection、分支保护、Dependabot 等设置属于管理员操作；本轮没有修改，也无法确认当前是否启用。
 
 ## 7. Swift / SwiftUI 架构检查
@@ -484,7 +484,7 @@ Debug 的 entitlement 包含 sandbox、用户选择文件读写、`get-task-allo
 - 真实窗口的 FPS、CPU、内存、冷/热启动、首次可交互；
 - VoiceOver、Reduce Motion、仅键盘人工验收；
 - 真实用户库迁移（只使用合成 Fixture）；
-- GitHub Actions 云端执行（推送时网络不可达，未触发）。
+- GitHub Actions 云端执行结果（push 已触发 workflow；本轮未等待云端完成）。
 
 ## 16. 门禁结论、提交与推送结果
 
@@ -493,7 +493,7 @@ Debug 的 entitlement 包含 sandbox、用户选择文件读写、`get-task-allo
 | 门禁 | 结论 | 依据与边界 |
 | --- | --- | --- |
 | Gate 1 安全 | **有条件通过** | 全历史凭据扫描未命中；未发现真实用户数据库/备份进入仓库；Release 无 `get-task-allow`；导入数量上限与测试隔离已补。Release 仍为 ad-hoc、无 App Sandbox entitlement，临时目录残留待所有者清理。 |
-| Gate 2 仓库 | **通过（远程核验后网络中断）** | `.gitignore`、`.gitattributes`、`CONTRIBUTING.md`、`SECURITY.md` 已补齐；`git diff --check` 通过；提交前 `git fetch origin` 曾成功，`origin/main` 与本地基线同为 `e4e3986`，无分叉。随后推送时网络再次中断，见第 16 节。 |
+| Gate 2 仓库 | **通过** | `.gitignore`、`.gitattributes`、`CONTRIBUTING.md`、`SECURITY.md` 已补齐；`git diff --check` 通过；提交前 `git fetch origin` 成功，`origin/main` 与本地基线同为 `e4e3986`，无分叉；随后普通 push 快进到 `4261d29`，无强推。 |
 | Gate 3 构建 | **通过（带发布警告）** | Debug `build-for-testing` 成功；最终源码的 Release 通用二进制从空 DerivedData 重建成功，`codesign --verify --deep --strict` 通过，Hardened Runtime 开启，`adhoc,runtime`，无 `get-task-allow`、无 entitlement。Release 的正式签名、沙盒与公证仍未完成。 |
 | Gate 4 测试 | **通过** | 143 个 Swift Testing + 3 个 XCTest，共 146 条单元/性能测试 0 失败；迁移、备份、替换/回滚测试均通过。最终 Debug 构建的 UI 测试 **20/20 通过，0 失败**（910.386 秒）。 |
 | Gate 5 性能 | **已测路径通过** | 有 100/1,000/10,000 合成数据基线；已记录优化前后与回归测试；未运行 Instruments、FPS、CPU、内存，不能声明端到端性能已验收。 |
@@ -516,19 +516,20 @@ git status -sb
 
 - `git diff --check` 通过；暂存与提交均按显式路径逐项加入，没有使用 `git add -A`。
 - 提交前的一次 `git fetch origin` 成功，`origin/main` 为 `e4e3986`，与本地基线一致，无分叉。
-- 准备推送时网络再次中断：`git push origin main` 先报连接 `github.com:443` 超时，重试后报 `Could not resolve host: github.com`。因此 **本轮没有成功 push**；`origin/main` 仍是 `e4e3986`，本地 `main` 领先 6 个提交。
+- 首次推送尝试因网络中断失败：先报连接 `github.com:443` 超时，后报 `Could not resolve host: github.com`。文档提交后重试，普通 `git push origin main` 成功：远程从 `e4e3986` 快进到 `4261d29`，没有使用强制推送。
 - 没有创建 tag 或 Release，没有使用强推、历史重写、远程分支删除或仓库权限修改。
 
-本轮实际提交（本地，按顺序）：
+本轮实际提交（按顺序）：
 
 1. `19bad34` `chore: improve repository hygiene and documentation`
 2. `2d4dcbd` `security: harden backup import and test storage`
 3. `539ba4a` `perf: narrow measured dashboard and task queries`
 4. `f4d5af4` `test: cover task workspace query scoping`
 5. `a213b26` `ci: add macOS validation workflow`
-6. 本文档提交：`docs: complete Phase 05.5 audit report`（本报告与 README；提交哈希见最终 `git log`）
+6. `4261d29` `docs: complete Phase 05.5 audit report`（本报告与 README）
+7. 本次推送结果修正提交：`docs: record Phase 05.5 push result`（哈希见最终 `git log`）
 
-推送待网络恢复后由所有者执行普通 `git push origin main`；若远程已前进，应先重新 fetch、合并或另开 PR，不能覆盖远程历史。
+第 6 个提交首次推送后，报告中的“尚未推送”已不准确；本修正提交按普通提交追加，不改写已推送历史。最终 `origin/main` 以最后一次正常 push 为准。
 
 本轮没有把任何凭据、真实任务内容或用户数据库写入提交信息、报告或 CI 日志。
 
