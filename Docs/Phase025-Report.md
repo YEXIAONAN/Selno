@@ -1,6 +1,6 @@
 # Selno · 序宁 — Phase 02.5 开发报告
 
-复核日期：2026-10-21。工程根目录：`/Users/waiting/Desktop/Project/Selno`。本次只完成剩余验收、经用户授权的重复源文件编译排除及交付报告，没有重建工程或新增业务功能。
+复核日期：2026-10-21。工程根目录：`<repo>`。本次只完成剩余验收、经用户授权的重复源文件编译排除及交付报告，没有重建工程或新增业务功能。
 
 ## 总览与导航
 
@@ -50,10 +50,10 @@
 
 暖白底板、细微明暗层次、石墨灰连续 S 曲线。横向肩部与圆角转折表达秩序和从容；使用留白保持小尺寸辨识。没有文字、日期数字、勾选框、蓝紫渐变或多色装饰。
 
-- 矢量绘制源码：[GenerateAppIcon.swift](/Users/waiting/Desktop/Project/Selno/Tools/GenerateAppIcon.swift)。
-- 高分辨率原稿：[SelnoIcon-master-4096.png](/Users/waiting/Desktop/Project/Selno/Branding/SelnoIcon-master-4096.png)，4096 × 4096。
-- 正式主图：[SelnoIcon-1024.png](/Users/waiting/Desktop/Project/Selno/Branding/SelnoIcon-1024.png)，1024 × 1024。
-- 工程资源：[AppIcon Contents.json](/Users/waiting/Desktop/Project/Selno/Selno/Assets.xcassets/AppIcon.appiconset/Contents.json) 及同目录十张 PNG。
+- 矢量绘制源码：[GenerateAppIcon.swift](../Tools/GenerateAppIcon.swift)。
+- 高分辨率原稿：[SelnoIcon-master-4096.png](../Branding/SelnoIcon-master-4096.png)，4096 × 4096。
+- 正式主图：[SelnoIcon-1024.png](../Branding/SelnoIcon-1024.png)，1024 × 1024。
+- 工程资源：[AppIcon Contents.json](../Selno/Assets.xcassets/AppIcon.appiconset/Contents.json) 及同目录十张 PNG。
 - 16、32、128、256、512 pt 各有 1x／2x，最大资源为 1024 px。每个尺寸从矢量独立渲染，小尺寸超采样后缩小，未放大低清位图。
 
 原 Target 的 Debug 和 Release 已指定 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`，继续复用。编译产物的 Info.plist 指向 `AppIcon`；`AppIcon.icns` 与 `Assets.car` 同时打包。Asset Catalog 中含十个 Icon Image rendition，覆盖 16–1024 px；icns 的兼容表示与 Assets.car 的高清表示共同提供系统图标。
@@ -82,7 +82,7 @@
 
 ### 已完成的完整测试
 
-2026-10-20 的最终完整测试结果保留在 [Phase025-Verified.xcresult](/Users/waiting/Desktop/Project/Selno/.build/phase025/Phase025-Verified.xcresult)。Xcode 汇总为 **50 个测试定义、55 次实际执行，全部通过，0 失败、0 跳过**。其中 Swift Testing 报告 40 个测试定义，XCTest UI 报告 11 次执行，包含深浅两次启动配置和动态参数用例。
+2026-10-20 的最终完整测试结果保留在 [Phase025-Verified.xcresult](../.build/phase025/Phase025-Verified.xcresult)。Xcode 汇总为 **50 个测试定义、55 次实际执行，全部通过，0 失败、0 跳过**。其中 Swift Testing 报告 40 个测试定义，XCTest UI 报告 11 次执行，包含深浅两次启动配置和动态参数用例。
 
 本次没有重复运行已通过的全量测试。业务代码没有变动，新增排除项只移除重复编译输入；当前 Debug、Release 构建已另行实际验证。测试运行设备为 macOS 15.8.1、Intel x86_64；arm64 已编译，未在 Apple Silicon 硬件上运行。
 

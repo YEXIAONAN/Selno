@@ -1,5 +1,60 @@
+# Xcode build output
 .build/
 DerivedData/
-.DS_Store
+build/
 *.xcresult
+*.xcarchive
+*.dSYM/
+*.ipa
+
+# Xcode per-user state
 xcuserdata/
+*.xcuserstate
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+._*
+
+# Local SwiftData stores and SQLite sidecars
+Selno.store
+Selno.store-*
+*.store-wal
+*.store-shm
+*.store-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# User backups and temporary exports (never commit real personal data)
+Selno-Backup-*.json
+Selno-PreRestore-*.json
+*.backup.json
+
+# Secrets, keys and signing material
+.env
+.env.*
+!.env.example
+Secrets.xcconfig
+*.xcconfig.local
+*.p8
+*.p12
+*.pfx
+*.key
+*.pem
+*.cer
+*.mobileprovision
+*.provisionprofile
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.orig
+*.rej
+*.swp
+*~
+
+# Tooling state
+.swiftpm/
+.idea/
+.vscode/

@@ -184,7 +184,7 @@
 - Debug 与 Release 均构建成功；Release 产物为 `x86_64 arm64` 通用架构，adhoc 签名校验通过。
 - 实际启动最终 Release 应用：进程存活，主窗口 1280×820、位置 (256,128)、标题「总览」；通过 Apple Event 正常退出，没有新的崩溃报告，也没有遗留系统崩溃对话框。
 - `git diff --check` 通过，没有空白错误。
-- 本轮运行使用 `DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer`，没有改变系统默认开发者目录。
+- 本轮运行使用 `DEVELOPER_DIR=<Xcode.app>/Contents/Developer`，没有改变系统默认开发者目录。
 
 ### 过程中修复的问题
 

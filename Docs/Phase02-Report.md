@@ -136,7 +136,7 @@ V1 的五种历史实体已完整冻结。V2 保留原有字段、关系和存�
 - `signature-verification.log`：两个配置的严格签名复核。
 - `screenshots/`：真实数据悬停、重启后安排、拖动改期、周/列表和浅深色窗口截图。
 
-复现命令如下；本机完整 Xcode 的 `DEVELOPER_DIR` 为 `/Users/waiting/Downloads/Xcode.app/Contents/Developer`，仅对命令设置，未修改系统 Xcode 选择或工程签名方式。
+复现命令如下；本机完整 Xcode 的 `DEVELOPER_DIR` 为 `<Xcode.app>/Contents/Developer`，仅对命令设置，未修改系统 Xcode 选择或工程签名方式。
 
 ```sh
 xcodebuild build-for-testing -project Selno.xcodeproj -scheme Selno \

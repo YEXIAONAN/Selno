@@ -102,7 +102,7 @@
 - 原 UI 测试：保留关键断言，统一独立存储、启动状态及控件定位。移除旧测试中读取 Dock 的逻辑，本轮仅使用 Selno 窗口截图。
 - `README.md` 与本报告：使用说明和验收记录。
 
-相对本轮开始时的文件哈希，共修改 28 个已有文件、新增 18 个文件（含报告）。逐文件清单及受保护文件核对见 [本轮文件审计](/Users/waiting/Desktop/Project/Selno/.build/phase03/source-audit.json)。这些数字不把 Phase 01／02／02.5 原有未提交文件重复计为本轮新增。
+相对本轮开始时的文件哈希，共修改 28 个已有文件、新增 18 个文件（含报告）。逐文件清单及受保护文件核对见 [本轮文件审计](../.build/phase03/source-audit.json)。这些数字不把 Phase 01／02／02.5 原有未提交文件重复计为本轮新增。
 
 ## 3. 模型与迁移
 
@@ -130,25 +130,25 @@ V1 定义保持冻结；先从实际 Phase 02 源码冻结 V2，再扩展当前�
 
 | 检查 | 实际结果与记录 |
 | --- | --- |
-| Debug `build-for-testing` | 通过；[构建日志](/Users/waiting/Desktop/Project/Selno/.build/phase03/debug-tmp-build.log) |
-| Release `build` | 通过；[构建日志](/Users/waiting/Desktop/Project/Selno/.build/phase03/release-final.log) |
+| Debug `build-for-testing` | 通过；[构建日志](../.build/phase03/debug-tmp-build.log) |
+| Release `build` | 通过；[构建日志](../.build/phase03/release-final.log) |
 | 最新单元测试 | **54 个定义、58 次参数化执行全部通过**，包含磁盘关闭重开后的模板快照、五个节点、多标签、V1／V2 迁移及独立事件 UUID／日期保留 |
 | 修复后 UI 定向复验 | 校园模板／节点／多标签／重启快照、模板标签管理／自定义字段／标签筛选／窄窗口两项全部通过 |
-| 最新定向结果包 | **56 个定义、60 次执行，0 失败、0 跳过**（54 个单元定义 + 2 个 UI 定义）；[Focused-Final.xcresult](/Users/waiting/Desktop/Project/Selno/.build/phase03/Focused-Final.xcresult)、[日志](/Users/waiting/Desktop/Project/Selno/.build/phase03/focused-final.log) |
+| 最新定向结果包 | **56 个定义、60 次执行，0 失败、0 跳过**（54 个单元定义 + 2 个 UI 定义）；[Focused-Final.xcresult](../.build/phase03/Focused-Final.xcresult)、[日志](../.build/phase03/focused-final.log) |
 | 其余 UI 回归 | 旧 Calendar 3 项、Dashboard 3 项、任务列表 3 项、启动 1 项，以及品牌动画 2 项均在本轮完整回归中通过；启动定义按两种配置执行 |
-| 架构 | Release 包含 **x86_64、arm64**；[记录](/Users/waiting/Desktop/Project/Selno/.build/phase03/release-architectures.txt) |
-| 签名 | Debug／Release 均经 `codesign --verify --deep --strict` 通过；[Debug](/Users/waiting/Desktop/Project/Selno/.build/phase03/debug-signature.log)、[Release](/Users/waiting/Desktop/Project/Selno/.build/phase03/release-signature.log) |
+| 架构 | Release 包含 **x86_64、arm64**；[记录](../.build/phase03/release-architectures.txt) |
+| 签名 | Debug／Release 均经 `codesign --verify --deep --strict` 通过；[Debug](../.build/phase03/debug-signature.log)、[Release](../.build/phase03/release-signature.log) |
 | 文件检查 | `git diff --check` 通过；原用户文件、图标、工程设置和暂存副本核对通过 |
 
 最新单元检查包括 14 个本轮新增定义；UI 新增 4 个定义。单元与 UI 共 68 个不同定义有本轮通过记录，结果分布在完整回归和后续定向结果包中。
 
 ### 已执行但失败、随后修复
 
-最近一次完整 Scheme 运行 [Final-Acceptance.xcresult](/Users/waiting/Desktop/Project/Selno/.build/phase03/Final-Acceptance.xcresult) 的原始结果是 **67 个定义、72 次执行：71 次通过、1 次失败，0 跳过**。失败项为校园任务重启后的快照标题定位，Xcode 在 macOS 15 上评估文字控件查询超时。对应运行界面中快照与日期数据实际存在。
+最近一次完整 Scheme 运行 [Final-Acceptance.xcresult](../.build/phase03/Final-Acceptance.xcresult) 的原始结果是 **67 个定义、72 次执行：71 次通过、1 次失败，0 跳过**。失败项为校园任务重启后的快照标题定位，Xcode 在 macOS 15 上评估文字控件查询超时。对应运行界面中快照与日期数据实际存在。
 
 随后给快照标题增加稳定标识，保留重启／节点／快照断言；该 UI 项在 `Focused-Final` 中重新通过。同时新增直接重开磁盘库的单元测试，核对模板 Data、字段 UUID、节点 UUID、日历选择、多标签和截止日期，已通过。模板编辑菜单的浅色对比度调整也经该次管理流程和真实截图复核。
 
-**修复后没有再执行一趟完整 Scheme**，而是重跑全部单元及受影响的两项 UI。上述完整运行的失败记录没有被删除或改记为通过。结果汇总见 [完整运行 JSON](/Users/waiting/Desktop/Project/Selno/.build/phase03/full-summary.json) 和 [定向复验 JSON](/Users/waiting/Desktop/Project/Selno/.build/phase03/focused-summary.json)。
+**修复后没有再执行一趟完整 Scheme**，而是重跑全部单元及受影响的两项 UI。上述完整运行的失败记录没有被删除或改记为通过。结果汇总见 [完整运行 JSON](../.build/phase03/full-summary.json) 和 [定向复验 JSON](../.build/phase03/focused-summary.json)。
 
 ### 验证方式
 
@@ -158,18 +158,18 @@ V1 定义保持冻结；先从实际 Phase 02 源码冻结 V2，再扩展当前�
 TASK_DERIVED_DATA=$(cat .build/phase03/verification-derived.txt)
 TASK_RELEASE_DERIVED_DATA=$(cat .build/phase03/release-derived.txt)
 
-DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer \
+DEVELOPER_DIR=<Xcode.app>/Contents/Developer \
 xcodebuild build-for-testing -project Selno.xcodeproj -scheme Selno \
   -configuration Debug -destination 'platform=macOS,arch=x86_64' \
   -derivedDataPath "$TASK_DERIVED_DATA"
 
-DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer \
+DEVELOPER_DIR=<Xcode.app>/Contents/Developer \
 xcodebuild test-without-building -project Selno.xcodeproj -scheme Selno \
   -configuration Debug -destination 'platform=macOS,arch=x86_64' \
   -derivedDataPath "$TASK_DERIVED_DATA" -collect-test-diagnostics never \
   -resultBundlePath .build/phase03/Final-Acceptance.xcresult
 
-DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer \
+DEVELOPER_DIR=<Xcode.app>/Contents/Developer \
 xcodebuild build -project Selno.xcodeproj -scheme Selno \
   -configuration Release -destination 'generic/platform=macOS' \
   -derivedDataPath "$TASK_RELEASE_DERIVED_DATA"
@@ -185,37 +185,37 @@ xcodebuild build -project Selno.xcodeproj -scheme Selno \
 
 ## 5. 真实界面与图标
 
-截图使用 `app.windows.firstMatch.screenshot()`，只取 Selno 自身窗口；内容由 UI 测试实际创建并持久化，不是设计稿。模板相关截图已用最后一次复验结果更新。完整索引见 [截图来源记录](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshot-index.json)。
+截图使用 `app.windows.firstMatch.screenshot()`，只取 Selno 自身窗口；内容由 UI 测试实际创建并持久化，不是设计稿。模板相关截图已用最后一次复验结果更新。完整索引见 [截图来源记录](../.build/phase03/screenshot-index.json)。
 
 深色总览：
 
-![深色总览](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/dashboard-dark.png)
+![深色总览](../.build/phase03/screenshots/dashboard-dark.png)
 
 浅色总览与真实任务、事件、收件箱数据：
 
-![浅色总览](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/dashboard-light.png)
+![浅色总览](../.build/phase03/screenshots/dashboard-light.png)
 
 模板任务创建与多标签：
 
-![模板任务创建](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/campus-template.png)
+![模板任务创建](../.build/phase03/screenshots/campus-template.png)
 
 二课活动的可选日期及独立日历／提醒选择：
 
-![二课活动日期](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/campus-dates.png)
+![二课活动日期](../.build/phase03/screenshots/campus-dates.png)
 
 标签筛选、长名称及窄窗口：
 
-![标签与窄窗口](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/inbox-tags.png)
+![标签与窄窗口](../.build/phase03/screenshots/inbox-tags.png)
 
 任务快照与多时间节点：
 
-![任务详情](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/task-details.png)
+![任务详情](../.build/phase03/screenshots/task-details.png)
 
-另有 [模板编辑](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/template-editor.png)、[标签管理](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/tags-settings.png)、[今天](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/today.png)、[项目](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/project.png)、[日历悬停](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/calendar-hover.png) 和 [深色紧凑窗口](/Users/waiting/Desktop/Project/Selno/.build/phase03/screenshots/dashboard-compact-dark.png)。
+另有 [模板编辑](../.build/phase03/screenshots/template-editor.png)、[标签管理](../.build/phase03/screenshots/tags-settings.png)、[今天](../.build/phase03/screenshots/today.png)、[项目](../.build/phase03/screenshots/project.png)、[日历悬停](../.build/phase03/screenshots/calendar-hover.png) 和 [深色紧凑窗口](../.build/phase03/screenshots/dashboard-compact-dark.png)。
 
 本轮没有重绘图标。原主图位于 `Branding/SelnoIcon-1024.png`，4096 原稿位于 `Branding/SelnoIcon-master-4096.png`；Asset Catalog 为 `Selno/Assets.xcassets/AppIcon.appiconset`。十个 PNG 槽位的尺寸与 JSON 已重新检查，Debug／Release 继续使用 `AppIcon`。
 
-两个包均包含 `AppIcon.icns`（48,818 字节）及 `Assets.car`（572,824 字节），`CFBundleIconFile=AppIcon`、Bundle Identifier 正确。通过系统 `NSWorkspace.icon(forFile:)` 从本轮 Release 包读取并渲染后，已人工查看为既有石墨灰 S 图标：[打包图标预览](/Users/waiting/Desktop/Project/Selno/.build/phase03/packaged-icon-preview.png)。这项检查没有打开 Finder、Dock 或应用切换器。资源证据见 [打包审计](/Users/waiting/Desktop/Project/Selno/.build/phase03/package-audit.json) 与 [尺寸审计](/Users/waiting/Desktop/Project/Selno/.build/phase03/icon-source-audit.json)。
+两个包均包含 `AppIcon.icns`（48,818 字节）及 `Assets.car`（572,824 字节），`CFBundleIconFile=AppIcon`、Bundle Identifier 正确。通过系统 `NSWorkspace.icon(forFile:)` 从本轮 Release 包读取并渲染后，已人工查看为既有石墨灰 S 图标：[打包图标预览](../.build/phase03/packaged-icon-preview.png)。这项检查没有打开 Finder、Dock 或应用切换器。资源证据见 [打包审计](../.build/phase03/package-audit.json) 与 [尺寸审计](../.build/phase03/icon-source-audit.json)。
 
 ## 6. 人工验收边界及后续细节
 

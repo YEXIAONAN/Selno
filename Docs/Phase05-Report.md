@@ -345,7 +345,7 @@ V5 迁移阶段只增加表，不写入默认工作台。默认工作台由 `App
 命令（使用完整 Xcode，未关闭签名）：
 
 ```sh
-DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer \
+DEVELOPER_DIR=<Xcode.app>/Contents/Developer \
 xcodebuild build-for-testing -project Selno.xcodeproj -scheme Selno \
   -destination 'platform=macOS' -derivedDataPath /tmp/SelnoPhase05DD
 ```
@@ -355,7 +355,7 @@ xcodebuild build-for-testing -project Selno.xcodeproj -scheme Selno \
 ### 10.2 Release
 
 ```sh
-DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer \
+DEVELOPER_DIR=<Xcode.app>/Contents/Developer \
 xcodebuild build -project Selno.xcodeproj -scheme Selno -configuration Release \
   -destination 'generic/platform=macOS' -derivedDataPath /tmp/SelnoPhase05ReleaseDD
 ```
@@ -380,7 +380,7 @@ xcodebuild build -project Selno.xcodeproj -scheme Selno -configuration Release \
 命令：
 
 ```sh
-DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer \
+DEVELOPER_DIR=<Xcode.app>/Contents/Developer \
 xcodebuild test -project Selno.xcodeproj -scheme Selno \
   -destination 'platform=macOS' -derivedDataPath /tmp/SelnoPhase05DD \
   -only-testing:SelnoTests
@@ -411,7 +411,7 @@ Phase 05 的 4 个 Suite 共 49 条测试：
 在最终代码上执行完整 UI target：
 
 ```sh
-DEVELOPER_DIR=/Users/waiting/Downloads/Xcode.app/Contents/Developer \
+DEVELOPER_DIR=<Xcode.app>/Contents/Developer \
 xcodebuild test -project Selno.xcodeproj -scheme Selno \
   -destination 'platform=macOS' -derivedDataPath /tmp/SelnoPhase05DD \
   -only-testing:SelnoUITests
