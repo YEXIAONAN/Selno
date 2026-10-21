@@ -64,14 +64,14 @@ private struct DashboardContent: View {
         _overdue = Query(DashboardDataQuery.overdue(before: today))
         _events = Query(CalendarDataQuery.events(in: range))
         _milestones = Query(CalendarDataQuery.milestones(in: range))
-        _inbox = Query(DashboardDataQuery.inbox())
+        _inbox = Query(DashboardDataQuery.inbox(limit: 4))
         _projects = Query(DashboardDataQuery.projects(limit: 3))
     }
 
-    /// The fetch predicate stays simple for SwiftData's type checker; archived
-    /// rows are dropped here so they never appear in daily counts or modules.
+    /// The query is already bounded to four unarchived rows; the prefix is a
+    /// defensive cap in case a future query edit removes the fetch limit.
     private var visibleInbox: [TodoTask] {
-        Array(inbox.lazy.filter { !$0.isArchived }.prefix(4))
+        Array(inbox.prefix(4))
     }
 
     private var revision: [String] {
@@ -341,7 +341,7 @@ private struct DashboardContent: View {
     }
     private func refreshCounts() {
         do {
-            inboxCount = try context.fetch(DashboardDataQuery.inbox()).filter { !$0.isArchived }.count
+            inboxCount = try context.fetchCount(DashboardDataQuery.inbox())
             projectCount = try context.fetchCount(DashboardDataQuery.projects())
         } catch { presentedError = PresentedError("无法读取总览数量", error: error) }
     }

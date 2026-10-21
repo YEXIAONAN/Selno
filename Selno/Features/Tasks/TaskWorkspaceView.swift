@@ -1,6 +1,56 @@
 import SwiftUI
 import SwiftData
 
+enum TaskWorkspaceQuery {
+    /// Archived rows are never shown by `TaskListScope`, so they are excluded
+    /// at the store level for every scope. The Inbox scope also narrows to
+    /// unplanned, unassigned rows; `TaskListScope.tasks` still applies the
+    /// remaining in-memory rules (including status sections).
+    static func tasks(for scope: TaskListScope) -> FetchDescriptor<TodoTask> {
+        let predicate: Predicate<TodoTask> = scope == .inbox
+            ? inboxPredicate()
+            : #Predicate<TodoTask> { $0.archivedAt == nil }
+        return FetchDescriptor<TodoTask>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\TodoTask.createdAt, order: .reverse)]
+        )
+    }
+
+    /// `#Predicate` cannot type-check the archived/project/planned chain in
+    /// reasonable time, and Foundation rejects a hand-built multi-component
+    /// key path, so the relationship check is expressed as a flat map.
+    private static func inboxPredicate() -> Predicate<TodoTask> {
+        Predicate<TodoTask> { task in
+            let unarchived = PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(root: task, keyPath: \.archivedAt),
+                rhs: PredicateExpressions.build_Arg(nil as Date?)
+            )
+            let project = PredicateExpressions.build_KeyPath(root: task, keyPath: \.project)
+            let projectID = PredicateExpressions.build_flatMap(project) { project in
+                PredicateExpressions.build_KeyPath(root: project, keyPath: \.id)
+            }
+            let unassigned = PredicateExpressions.build_Equal(
+                lhs: projectID,
+                rhs: PredicateExpressions.build_Arg(nil as UUID?)
+            )
+            let unscheduledStart = PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(root: task, keyPath: \.plannedStartAt),
+                rhs: PredicateExpressions.build_Arg(nil as Date?)
+            )
+            let unscheduled = PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(root: task, keyPath: \.plannedAt),
+                rhs: PredicateExpressions.build_Arg(nil as Date?)
+            )
+            let planned = PredicateExpressions.build_Conjunction(
+                lhs: unscheduledStart,
+                rhs: unscheduled
+            )
+            let unplanned = PredicateExpressions.build_Conjunction(lhs: unassigned, rhs: planned)
+            return PredicateExpressions.build_Conjunction(lhs: unarchived, rhs: unplanned)
+        }
+    }
+}
+
 struct TaskWorkspaceView: View {
     let scope: TaskListScope
     let calendar: Calendar
@@ -19,7 +69,7 @@ struct TaskWorkspaceView: View {
 }
 
 private struct TaskWorkspaceContent: View {
-    @Query(sort: \TodoTask.createdAt, order: .reverse) private var tasks: [TodoTask]
+    @Query private var tasks: [TodoTask]
     @Query private var events: [CalendarEvent]
     let scope: TaskListScope
     let calendar: Calendar
@@ -36,14 +86,22 @@ private struct TaskWorkspaceContent: View {
         self.requestedTaskID = requestedTaskID
         self.requestToken = requestToken
         _selection = State(initialValue: requestedTaskID.map { [$0] } ?? [])
+        _tasks = Query(TaskWorkspaceQuery.tasks(for: scope))
         let start = calendar.startOfDay(for: now)
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
         _events = Query(CalendarDataQuery.events(in: DateInterval(start: start, end: end)))
     }
 
+    /// The store predicate covers archived/project/planned fields; the
+    /// in-memory check also applies `isInInbox`'s complete definition and keeps
+    /// the semantics in one place if the predicate is narrowed later.
+    private var visibleTasks: [TodoTask] {
+        scope == .inbox ? tasks.filter(\.isInInbox) : tasks
+    }
+
     var body: some View {
         HSplitView {
-            TaskListView(scope: scope, tasks: tasks, selection: $selection, focusRequest: focusRequest,
+            TaskListView(scope: scope, tasks: visibleTasks, selection: $selection, focusRequest: focusRequest,
                          events: scope == .today ? events : [], openEvent: {
                 selection.removeAll()
                 selectedEvent = $0
@@ -51,7 +109,7 @@ private struct TaskWorkspaceContent: View {
             .frame(minWidth: 290, idealWidth: 370, maxWidth: 600, maxHeight: .infinity)
             Group {
                 if selection.count == 1, let selectedTaskID = selection.first,
-                   let task = tasks.first(where: { $0.id == selectedTaskID }) {
+                   let task = visibleTasks.first(where: { $0.id == selectedTaskID }) {
                     TaskDetailView(task: task).id(task.id)
                 } else if selection.count > 1 {
                     ContentUnavailableView {

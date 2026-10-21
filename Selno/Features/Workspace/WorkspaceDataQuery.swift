@@ -199,7 +199,8 @@ final class WorkspaceBoardData {
 
     func tasks(matching filter: TaskFilterExpression) -> [TodoTask] {
         if let cached = taskCache[filter] { return cached }
-        let result = allTasks.filter { filter.matches($0, now: now, calendar: calendar) }
+        let context = filter.evaluationContext(now: now, calendar: calendar)
+        let result = allTasks.filter { filter.matches($0, context: context) }
         taskCache[filter] = result
         return result
     }
@@ -224,7 +225,8 @@ final class WorkspaceBoardData {
             days: key.days,
             monthWindow: monthWindow,
             calendar: calendar,
-            milestones: milestones(matching: filter)
+            milestones: milestones(matching: filter),
+            includeMonth: false
         )
         projectionCache[key] = result
         return result

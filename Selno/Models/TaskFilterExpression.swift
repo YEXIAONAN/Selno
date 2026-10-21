@@ -83,6 +83,12 @@ nonisolated enum FilterPresence: String, CaseIterable, Identifiable, Codable, Se
 /// A reusable, serializable task filter. Values inside one dimension are ORed;
 /// dimensions are ANDed. Dates are evaluated with the caller's current Calendar
 /// and TimeZone, never by slicing UTC strings.
+nonisolated struct TaskFilterEvaluationContext {
+    let today: Date
+    let interval: DateInterval?
+    let needle: String
+}
+
 nonisolated struct TaskFilterExpression: Codable, Equatable, Hashable {
     var statuses: Set<String>
     var importances: Set<String>
@@ -245,8 +251,21 @@ nonisolated struct TaskFilterExpression: Codable, Equatable, Hashable {
 
     // MARK: Matching
 
+    /// Values that do not depend on the task. Build this once per pass instead
+    /// of calling `startOfDay` and rebuilding a date interval for every row.
+    nonisolated func evaluationContext(now: Date, calendar: Calendar) -> TaskFilterEvaluationContext {
+        TaskFilterEvaluationContext(
+            today: calendar.startOfDay(for: now),
+            interval: TaskFilterEngine.interval(
+                for: dateRange, customStart: customStart, customEnd: customEnd,
+                now: now, calendar: calendar
+            ),
+            needle: searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+
     @MainActor
-    func matches(_ task: TodoTask, now: Date, calendar: Calendar) -> Bool {
+    func matches(_ task: TodoTask, context: TaskFilterEvaluationContext) -> Bool {
         if task.isArchived && !includeArchived { return false }
 
         if !statuses.isEmpty {
@@ -269,7 +288,6 @@ nonisolated struct TaskFilterExpression: Codable, Equatable, Hashable {
             guard !ids.isDisjoint(with: tagIDs) else { return false }
         }
 
-        let today = calendar.startOfDay(for: now)
         switch dueState {
         case .any:
             break
@@ -278,9 +296,9 @@ nonisolated struct TaskFilterExpression: Codable, Equatable, Hashable {
         case .noDue:
             guard task.dueAt == nil else { return false }
         case .overdue:
-            guard task.status.isActive, let due = task.dueAt, due < today else { return false }
+            guard task.status.isActive, let due = task.dueAt, due < context.today else { return false }
         case .notOverdue:
-            guard let due = task.dueAt, due >= today else { return false }
+            guard let due = task.dueAt, due >= context.today else { return false }
         }
 
         switch plannedState {
@@ -292,19 +310,20 @@ nonisolated struct TaskFilterExpression: Codable, Equatable, Hashable {
             guard task.plannedAt == nil && task.plannedStartAt == nil else { return false }
         }
 
-        if let interval = TaskFilterEngine.interval(
-            for: dateRange, customStart: customStart, customEnd: customEnd,
-            now: now, calendar: calendar
-        ) {
+        if let interval = context.interval {
             let dates = TaskFilterEngine.dates(for: dateField, task: task)
             guard dates.contains(where: { TaskFilterEngine.contains(interval, $0) }) else { return false }
         }
 
-        let needle = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !needle.isEmpty && !TaskQueryFilter.matches(task, needle: needle) {
+        if !context.needle.isEmpty && !TaskQueryFilter.matches(task, needle: context.needle) {
             return false
         }
         return true
+    }
+
+    @MainActor
+    func matches(_ task: TodoTask, now: Date, calendar: Calendar) -> Bool {
+        matches(task, context: evaluationContext(now: now, calendar: calendar))
     }
 
     // MARK: Human readable
@@ -396,7 +415,8 @@ enum TaskFilterEngine {
         now: Date,
         calendar: Calendar
     ) -> [TodoTask] {
-        tasks.filter { filter.matches($0, now: now, calendar: calendar) }
+        let context = filter.evaluationContext(now: now, calendar: calendar)
+        return tasks.filter { filter.matches($0, context: context) }
     }
 
     nonisolated static func interval(

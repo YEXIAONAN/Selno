@@ -96,8 +96,12 @@ struct DashboardTests {
         try service.setStatus(.completed, for: completed)
         let project = try ProjectService(context: context).save(name: "项目", notes: "")
         try service.createTask(title: "项目任务", project: project)
+        let archived = try service.createTask(title: "已归档但仍符合旧规则")
+        archived.archivedAt = day(-1)
         try context.save()
-        #expect(try context.fetch(DashboardDataQuery.inbox(limit: 4)).count == 4)
+        let visible = try context.fetch(DashboardDataQuery.inbox(limit: 4))
+        #expect(visible.count == 4)
+        #expect(visible.allSatisfy { !$0.isArchived })
         #expect(try context.fetchCount(DashboardDataQuery.inbox()) == 8)
     }
 

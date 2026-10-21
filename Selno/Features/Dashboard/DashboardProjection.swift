@@ -23,7 +23,8 @@ struct DashboardProjection {
     var overdueCount: Int { focus.filter(\.isOverdue).count }
 
     static func build(tasks: [TodoTask], events: [CalendarEvent], now: Date, days: Int,
-                      monthWindow: CalendarWindow, calendar: Calendar, milestones: [TaskMilestone] = []) -> Self {
+                      monthWindow: CalendarWindow, calendar: Calendar, milestones: [TaskMilestone] = [],
+                      includeMonth: Bool = true) -> Self {
         let today = calendar.startOfDay(for: now)
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
         let end = calendar.date(byAdding: .day, value: days + 1, to: today) ?? tomorrow
@@ -102,7 +103,13 @@ struct DashboardProjection {
             }
             return group
         }
-        result.month = CalendarAgendaBuilder.build(tasks: uniqueTasks, events: events, window: monthWindow, calendar: calendar, milestones: milestones)
+        // Workspace boards only read focus, events, upcoming and overdue counts.
+        // Building the full month snapshot there costs an O(tasks + events x days)
+        // pass whose result is discarded.
+        if includeMonth {
+            result.month = CalendarAgendaBuilder.build(tasks: uniqueTasks, events: events, window: monthWindow,
+                                                       calendar: calendar, milestones: milestones)
+        }
         return result
     }
 }
