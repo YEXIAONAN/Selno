@@ -1,6 +1,6 @@
 import Foundation
 
-enum TaskStatus: String, CaseIterable, Identifiable {
+nonisolated enum TaskStatus: String, CaseIterable, Identifiable {
     case pending
     case inProgress
     case completed
@@ -20,7 +20,7 @@ enum TaskStatus: String, CaseIterable, Identifiable {
     var isActive: Bool { self == .pending || self == .inProgress }
 }
 
-enum TaskImportance: String, CaseIterable, Identifiable {
+nonisolated enum TaskImportance: String, CaseIterable, Identifiable {
     case low
     case normal
     case high
@@ -44,7 +44,7 @@ enum TaskImportance: String, CaseIterable, Identifiable {
     }
 }
 
-enum TaskUrgency {
+nonisolated enum TaskUrgency {
     case unscheduled
     case upcoming
     case dueToday

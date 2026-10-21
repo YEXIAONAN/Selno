@@ -117,7 +117,9 @@ private struct ProjectDetailView: View {
     init(project: TodoProject, calendar: Calendar) {
         self.project = project; self.calendar = calendar
         let projectID = project.id
-        _tasks = Query(filter: #Predicate<TodoTask> { $0.project?.id == projectID }, sort: \TodoTask.createdAt)
+        _tasks = Query(filter: #Predicate<TodoTask> {
+            $0.project?.id == projectID && $0.archivedAt == nil
+        }, sort: \TodoTask.createdAt)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

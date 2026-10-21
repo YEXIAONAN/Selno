@@ -1,5 +1,22 @@
 import Foundation
 
+/// One selection model for the fixed sections and the user's scenario
+/// workspaces. `.section(.overview)` always represents the global workspace.
+enum SidebarSelection: Hashable {
+    case section(AppSection)
+    case workspace(UUID)
+
+    var section: AppSection? {
+        if case .section(let value) = self { return value }
+        return nil
+    }
+
+    var workspaceID: UUID? {
+        if case .workspace(let value) = self { return value }
+        return nil
+    }
+}
+
 enum AppSection: String, CaseIterable, Identifiable {
     case overview, calendar, today, inbox, all, projects
     var id: String { rawValue }

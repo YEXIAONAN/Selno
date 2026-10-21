@@ -5,7 +5,9 @@ enum DashboardDataQuery {
     static func overdue(before today: Date) -> FetchDescriptor<TodoTask> {
         let missing = Date.distantFuture
         return FetchDescriptor<TodoTask>(predicate: #Predicate<TodoTask> { task in
-            (task.statusRaw == "pending" || task.statusRaw == "inProgress") && (task.dueAt ?? missing) < today
+            task.archivedAt == nil
+                && (task.statusRaw == "pending" || task.statusRaw == "inProgress")
+                && (task.dueAt ?? missing) < today
         }, sortBy: [SortDescriptor(\TodoTask.createdAt)])
     }
 

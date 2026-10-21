@@ -17,6 +17,13 @@ final class AppBootstrap {
             let container = try PersistenceController.makeContainer(storage: launchStorage())
             try DefaultDataSeeder.seedIfNeeded(in: container.mainContext)
             try TemplatePresets.seed(in: container.mainContext)
+            // Idempotent: creates the global workspace on the first Phase 05 launch
+            // (or after a V1 backup restore) and never duplicates it afterwards.
+            try WorkspaceSeeder.seedIfNeeded(in: container.mainContext)
+            // Set the notification delegate during bootstrap, before the first window.
+            // A notification that launched the app can then deliver its task deep link
+            // even if SwiftUI has not subscribed yet.
+            NotificationCenterCoordinator.shared.configure(with: container)
             self.container = container
             failureMessage = nil
         } catch {

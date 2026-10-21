@@ -114,7 +114,7 @@ struct ProjectProgress {
     var fraction: Double { total == 0 ? 0 : Double(completed) / Double(total) }
 
     init(project: TodoProject, now: Date, calendar: Calendar) {
-        let tasks = project.tasks ?? []
+        let tasks = (project.tasks ?? []).filter { !$0.isArchived }
         total = tasks.count
         completed = tasks.filter { $0.status == .completed }.count
         overdue = tasks.filter { $0.status.isActive && ($0.dueAt.map { $0 < calendar.startOfDay(for: now) } ?? false) }.count

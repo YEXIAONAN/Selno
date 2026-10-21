@@ -5,11 +5,21 @@ struct TaskDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     let task: TodoTask
+    @Query private var reminders: [TaskReminder]
     @State private var isEditing = false
     @State private var presentedError: PresentedError?
     @State private var savingTemplate = false
     @State private var templateName = ""
     @State private var deleting = false
+
+    init(task: TodoTask) {
+        self.task = task
+        let taskID = task.id
+        _reminders = Query(
+            filter: #Predicate<TaskReminder> { $0.taskID == taskID },
+            sort: [SortDescriptor(\TaskReminder.createdAt)]
+        )
+    }
 
     var body: some View {
         Form {
@@ -32,6 +42,30 @@ struct TaskDetailView: View {
                 dateRow("计划日期", date: task.plannedAt)
                 dateRow("截止日期", date: task.dueAt)
                 LabeledContent("项目", value: task.project?.name ?? "未指定")
+            }
+            if !reminders.isEmpty {
+                Section("提醒") {
+                    ForEach(reminders) { reminder in
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: reminder.kind == .due ? "clock.arrow.circlepath" : "alarm")
+                                .foregroundStyle(SelnoDesign.secondary)
+                                .frame(width: 18)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(reminder.kind.title)
+                                Text(reminder.leadDescription)
+                                    .font(.caption).foregroundStyle(SelnoDesign.secondary)
+                                if let snooze = reminder.snoozeUntil, snooze > .now {
+                                    Text("已延后到 \(snooze.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.caption2).foregroundStyle(SelnoDesign.accent)
+                                }
+                            }
+                            Spacer()
+                            Text(reminder.state.title)
+                                .font(.caption)
+                                .foregroundStyle(reminderStateColor(reminder.state))
+                        }
+                    }
+                }
             }
             if !task.orderedSteps.isEmpty {
                 Section("子任务 · \(task.completedStepCount)/\(task.orderedSteps.count)") {
@@ -77,12 +111,26 @@ struct TaskDetailView: View {
         } message: { Text("保留字段和默认内容，不复制已经过去的日期及提醒。") }
         .confirmationDialog("删除任务及其关联时间节点？", isPresented: $deleting) {
             Button("删除任务", role: .destructive) {
-                do { try TaskService(context: context).delete(task); dismiss() }
-                catch { presentedError = PresentedError("无法删除任务", error: error) }
+                do {
+                    let snapshot = try TaskService(context: context).delete(task)
+                    TaskUndoCenter.shared.offer(snapshot)
+                    dismiss()
+                } catch {
+                    presentedError = PresentedError("无法删除任务", error: error)
+                }
             }
         }
         .alert(item: $presentedError) { error in
             Alert(title: Text(error.title), message: Text(error.message), dismissButton: .default(Text("好")))
+        }
+    }
+
+    private func reminderStateColor(_ state: TaskReminderState) -> Color {
+        switch state {
+        case .scheduled: SelnoDesign.success
+        case .blocked, .failed: SelnoDesign.warning
+        case .expired, .paused, .duplicate: SelnoDesign.secondary
+        case .pending, .unconfigured: SelnoDesign.secondary
         }
     }
 

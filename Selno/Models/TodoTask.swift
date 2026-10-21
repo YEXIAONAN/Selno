@@ -14,6 +14,9 @@ final class TodoTask {
     var plannedStartAt: Date?
     var plannedAt: Date?
     var dueAt: Date?
+    /// Task-level archive. Archived tasks are hidden from everyday lists but keep all
+    /// relationships, history and reminder rows; they can be restored at any time.
+    var archivedAt: Date?
     var project: TodoProject?
     var category: TaskCategory?
     @Relationship(deleteRule: .nullify, inverse: \TaskCategory.taggedTasks)
@@ -46,7 +49,8 @@ final class TodoTask {
 
     var status: TaskStatus { TaskStatus(rawValue: statusRaw) ?? .pending }
     var importance: TaskImportance { TaskImportance(rawValue: importanceRaw) ?? .normal }
-    var isInInbox: Bool { project == nil && plannedAt == nil && plannedStartAt == nil }
+    var isArchived: Bool { archivedAt != nil }
+    var isInInbox: Bool { project == nil && plannedAt == nil && plannedStartAt == nil && archivedAt == nil }
     var visibleTags: [TaskCategory] {
         var ids = Set<UUID>()
         return ((tags ?? []) + (category.map { [$0] } ?? [])).filter { !$0.isArchived && ids.insert($0.id).inserted }

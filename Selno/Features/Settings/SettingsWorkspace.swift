@@ -4,7 +4,10 @@ import SwiftData
 struct SettingsWorkspace: View {
     var body: some View {
         TabView {
+            DataManagementView().tabItem { Label("数据管理", systemImage: "externaldrive") }
+            ReminderSettingsView().tabItem { Label("提醒", systemImage: "bell") }
             TemplateManagementView().tabItem { Label("任务模板", systemImage: "square.stack") }
+            SavedViewManagementView().tabItem { Label("任务视图", systemImage: "line.3.horizontal.decrease.circle") }
             TagManagementView().tabItem { Label("标签", systemImage: "tag") }
         }.frame(width: 760, height: 650).tint(SelnoDesign.accent)
     }

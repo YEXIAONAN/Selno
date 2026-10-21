@@ -6,7 +6,7 @@ struct SelnoApp: App {
     @State private var bootstrap = AppBootstrap()
 
     var body: some Scene {
-        WindowGroup("Selno") {
+        WindowGroup("Selno", id: "main") {
             if let container = bootstrap.container {
                 MainWindowView()
                     .modelContainer(container)

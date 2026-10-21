@@ -33,10 +33,11 @@ enum TaskListScope: String, CaseIterable, Identifiable {
 
     func tasks(from tasks: [TodoTask], on date: Date, calendar: Calendar) -> [TodoTask] {
         tasks.filter { task in
+            guard !task.isArchived else { return false }
             switch self {
-            case .today: TodayTaskFilter.includes(task, on: date, calendar: calendar)
-            case .inbox: task.isInInbox
-            case .all: true
+            case .today: return TodayTaskFilter.includes(task, on: date, calendar: calendar)
+            case .inbox: return task.isInInbox
+            case .all: return true
             }
         }.sorted { lhs, rhs in
             if lhs.status.isActive != rhs.status.isActive { return lhs.status.isActive }

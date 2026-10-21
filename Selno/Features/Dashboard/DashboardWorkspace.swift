@@ -64,8 +64,14 @@ private struct DashboardContent: View {
         _overdue = Query(DashboardDataQuery.overdue(before: today))
         _events = Query(CalendarDataQuery.events(in: range))
         _milestones = Query(CalendarDataQuery.milestones(in: range))
-        _inbox = Query(DashboardDataQuery.inbox(limit: 4))
+        _inbox = Query(DashboardDataQuery.inbox())
         _projects = Query(DashboardDataQuery.projects(limit: 3))
+    }
+
+    /// The fetch predicate stays simple for SwiftData's type checker; archived
+    /// rows are dropped here so they never appear in daily counts or modules.
+    private var visibleInbox: [TodoTask] {
+        Array(inbox.lazy.filter { !$0.isArchived }.prefix(4))
     }
 
     private var revision: [String] {
@@ -235,10 +241,10 @@ private struct DashboardContent: View {
     private var inboxModule: some View {
         WorkspaceCard {
             ModuleHeading(title: "收件箱", symbol: "tray", detail: "\(inboxCount)", actionTitle: "整理", action: { navigate(.inbox) })
-            if inbox.isEmpty { QuietEmptyState(title: "想法随时放在这里", message: "尚未安排的任务，稍后再整理。") }
+            if visibleInbox.isEmpty { QuietEmptyState(title: "想法随时放在这里", message: "尚未安排的任务，稍后再整理。") }
             else {
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(inbox) { task in
+                    ForEach(visibleInbox) { task in
                         Button { selection = .task(task) } label: {
                             HStack(alignment: .firstTextBaseline, spacing: 7) {
                                 Image(systemName: "circle.small").foregroundStyle(.tertiary)
@@ -335,7 +341,7 @@ private struct DashboardContent: View {
     }
     private func refreshCounts() {
         do {
-            inboxCount = try context.fetchCount(DashboardDataQuery.inbox())
+            inboxCount = try context.fetch(DashboardDataQuery.inbox()).filter { !$0.isArchived }.count
             projectCount = try context.fetchCount(DashboardDataQuery.projects())
         } catch { presentedError = PresentedError("无法读取总览数量", error: error) }
     }
@@ -349,13 +355,15 @@ private struct DashboardContent: View {
     }
 }
 
-private struct CompactMonthView: View {
+struct CompactMonthView: View {
     let window: CalendarWindow
     let today: Date
     let snapshot: CalendarAgendaSnapshot
     let calendar: Calendar
+    var identifierPrefix = "dashboard.day"
+    var roomy = false
     let select: (Date) -> Void
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
+    private var columns: [GridItem] { Array(repeating: GridItem(.flexible(), spacing: 2), count: 7) }
     var body: some View {
         LazyVGrid(columns: columns, spacing: 4) {
             ForEach(0..<7, id: \.self) { index in
@@ -369,8 +377,8 @@ private struct CompactMonthView: View {
                 Button { select(day) } label: {
                     VStack(spacing: 3) {
                         Text("\(calendar.component(.day, from: day))")
-                            .font(.system(size: 11, weight: isToday ? .semibold : .regular)).monospacedDigit()
-                            .frame(width: 24, height: 24)
+                            .font(.system(size: roomy ? 13 : 11, weight: isToday ? .semibold : .regular)).monospacedDigit()
+                            .frame(width: roomy ? 32 : 24, height: roomy ? 32 : 24)
                             .foregroundStyle(isToday ? Color(nsColor: .windowBackgroundColor) : .primary)
                             .background(isToday ? Color.primary : .clear, in: Circle())
                         HStack(spacing: 2) {
@@ -382,7 +390,7 @@ private struct CompactMonthView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(CalendarMath.fullDate(day, calendar: calendar))
                 .accessibilityValue("\(agenda.pendingCount) 项待办，\(agenda.events.count) 项日程")
-                .accessibilityIdentifier("dashboard.day.\(CalendarMath.dayID(day, calendar: calendar))")
+                .accessibilityIdentifier("\(identifierPrefix).\(CalendarMath.dayID(day, calendar: calendar))")
                 .help(hoverSummary(agenda))
             }
         }

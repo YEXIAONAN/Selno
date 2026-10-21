@@ -15,7 +15,7 @@ struct TaskRowView: View {
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: task.statusRaw)
                     .foregroundStyle(task.status == .completed ? .secondary : .primary)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
             .disabled(task.status == .cancelled)
             .accessibilityLabel(task.status == .completed ? "恢复为未完成" : "标记为完成")
             .accessibilityValue(task.status.title)
@@ -40,6 +40,9 @@ struct TaskRowView: View {
                     if !(task.steps ?? []).isEmpty {
                         Text("\(task.completedStepCount)/\((task.steps ?? []).count)")
                     }
+                    if task.isArchived {
+                        Label("已归档", systemImage: "archivebox")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -48,6 +51,5 @@ struct TaskRowView: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 5)
-        .contentShape(Rectangle())
     }
 }

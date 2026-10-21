@@ -225,6 +225,9 @@ final class CalendarUITests: XCTestCase {
     @MainActor
     private func dismissUnneededAppDesktopPrompt() {
         let notifications = XCUIApplication(bundleIdentifier: "com.apple.UserNotificationCenter")
+        // Querying an app that is not running throws, and the system agent is
+        // only spawned on demand; no running agent means no prompt to dismiss.
+        guard notifications.state != .notRunning else { return }
         for dialog in notifications.dialogs.allElementsBoundByIndex {
             let message = dialog.staticTexts.matching(NSPredicate(
                 format: "(label CONTAINS %@ OR value CONTAINS %@) AND NOT (label CONTAINS %@ OR value CONTAINS %@)",
@@ -247,6 +250,7 @@ final class CalendarUITests: XCTestCase {
     @discardableResult
     private func allowRunnerDesktopAccessIfPresented() -> Bool {
         let notifications = XCUIApplication(bundleIdentifier: "com.apple.UserNotificationCenter")
+        guard notifications.state != .notRunning else { return false }
         let message = notifications.staticTexts.matching(NSPredicate(
             format: "label CONTAINS %@ OR value CONTAINS %@",
             "SelnoUITests-Runner", "SelnoUITests-Runner"

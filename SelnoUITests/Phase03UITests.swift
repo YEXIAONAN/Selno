@@ -133,7 +133,9 @@ final class Phase03UITests: XCTestCase {
         let first = "每一件事，有条不紊。"
         XCTAssertTrue(wait(until: { heading.label == first && (heading.value as? String) == first }, timeout: 6))
         app.descendants(matching: .any)["settings.open"].firstMatch.click()
-        XCTAssertTrue(app.buttons["templates.new"].firstMatch.waitForExistence(timeout: 5))
+        let dataTab = app.buttons["数据管理"].firstMatch
+        XCTAssertTrue(dataTab.waitForExistence(timeout: 5)); dataTab.click()
+        XCTAssertTrue(app.buttons["data.export"].firstMatch.waitForExistence(timeout: 5))
         let pausedValue = heading.value as? String
         let pausedLabel = heading.label
         let until = Date.now.addingTimeInterval(6)
@@ -160,14 +162,17 @@ final class Phase03UITests: XCTestCase {
     @MainActor private func settleLaunch(_ app: XCUIApplication) {
         if app.windows.firstMatch.waitForExistence(timeout: 3) { return }
         let notifications = XCUIApplication(bundleIdentifier: "com.apple.UserNotificationCenter")
-        let ownMessage = notifications.staticTexts.matching(NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", "Selno", "Selno")).firstMatch
-        if ownMessage.exists {
-            let message = "\(ownMessage.label) \(ownMessage.value ?? "")"
-            if message.localizedCaseInsensitiveContains("desktop") || message.contains("桌面") {
-                let runner = message.contains("SelnoUITests-Runner")
-                let choices = runner ? ["允许", "Allow"] : ["不允许", "Don’t Allow", "Don't Allow"]
-                let button = notifications.buttons.matching(NSPredicate(format: "title IN %@ OR label IN %@", choices, choices)).firstMatch
-                if button.exists { button.click() }
+        // The system agent only runs on demand; querying it while stopped throws.
+        if notifications.state != .notRunning {
+            let ownMessage = notifications.staticTexts.matching(NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", "Selno", "Selno")).firstMatch
+            if ownMessage.exists {
+                let message = "\(ownMessage.label) \(ownMessage.value ?? "")"
+                if message.localizedCaseInsensitiveContains("desktop") || message.contains("桌面") {
+                    let runner = message.contains("SelnoUITests-Runner")
+                    let choices = runner ? ["允许", "Allow"] : ["不允许", "Don’t Allow", "Don't Allow"]
+                    let button = notifications.buttons.matching(NSPredicate(format: "title IN %@ OR label IN %@", choices, choices)).firstMatch
+                    if button.exists { button.click() }
+                }
             }
         }
         app.activate()

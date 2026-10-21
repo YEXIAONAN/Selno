@@ -10,18 +10,40 @@ enum PersistenceController {
     }
 
     static func localStoreURL() throws -> URL {
+        try applicationSupportDirectory()
+        .appendingPathComponent("Selno", isDirectory: true)
+        .appendingPathComponent("Selno.store")
+    }
+
+    /// Logical JSON backups written before a destructive "replace" import.
+    /// UI tests use a folder beside their own store, so test rows never appear
+    /// among the real automatic backups.
+    static func automaticBackupDirectoryURL() throws -> URL {
+        var directory = try applicationSupportDirectory()
+            .appendingPathComponent("Selno", isDirectory: true)
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--selno-ui-testing"),
+           let value = ProcessInfo.processInfo.environment["SELNO_UI_TEST_STORE_ID"],
+           let id = UUID(uuidString: value) {
+            directory = directory
+                .appendingPathComponent("UITests", isDirectory: true)
+                .appendingPathComponent(id.uuidString, isDirectory: true)
+        }
+        #endif
+        return directory.appendingPathComponent("Backups", isDirectory: true)
+    }
+
+    private static func applicationSupportDirectory() throws -> URL {
         try FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
         )
-        .appendingPathComponent("Selno", isDirectory: true)
-        .appendingPathComponent("Selno.store")
     }
 
     static func makeContainer(storage: Storage = .local) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: SelnoSchemaV3.self)
+        let schema = Schema(versionedSchema: SelnoSchemaV5.self)
         let configuration: ModelConfiguration
 
         switch storage {

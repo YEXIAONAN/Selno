@@ -1,6 +1,6 @@
 import Foundation
 
-enum CalendarViewMode: String, CaseIterable, Identifiable {
+nonisolated enum CalendarViewMode: String, CaseIterable, Identifiable {
     case month, week, list
     var id: String { rawValue }
     var title: String {
@@ -12,7 +12,7 @@ enum CalendarViewMode: String, CaseIterable, Identifiable {
     }
 }
 
-enum CalendarListRange: String, CaseIterable, Identifiable {
+nonisolated enum CalendarListRange: String, CaseIterable, Identifiable {
     case week, month, thirtyDays
     var id: String { rawValue }
     var title: String {
@@ -24,12 +24,12 @@ enum CalendarListRange: String, CaseIterable, Identifiable {
     }
 }
 
-struct CalendarWindow: Hashable {
+nonisolated struct CalendarWindow: Hashable {
     let range: DateInterval
     let days: [Date]
 }
 
-enum CalendarMath {
+nonisolated enum CalendarMath {
     static func days(in interval: DateInterval, calendar: Calendar) -> [Date] {
         var days: [Date] = []
         var day = calendar.startOfDay(for: interval.start)

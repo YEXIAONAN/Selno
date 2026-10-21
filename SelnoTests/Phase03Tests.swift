@@ -61,7 +61,11 @@ import Testing
         let c = try container(); let context = c.mainContext
         let definition = try campus()
         var payload = TemplatePayload(definition: definition)
-        let date = Date.now.addingTimeInterval(7 * 86400)
+        // Anchor at 09:00 so every offset below stays on the same calendar day no
+        // matter when the suite runs; a bare "now + 7 days" crossed midnight after
+        // 17:00 and made the same-day agenda assertion time-of-day dependent.
+        let anchorDay = Calendar.current.startOfDay(for: Date.now.addingTimeInterval(7 * 86400))
+        let date = Calendar.current.date(byAdding: .hour, value: 9, to: anchorDay) ?? anchorDay
         for index in payload.fields.indices where payload.fields[index].kind == .dateTime {
             payload.answers[index].date = date.addingTimeInterval(Double(index) * 3600)
             payload.answers[index].showOnCalendar = true

@@ -27,6 +27,16 @@ import SwiftData
         self.templateID = templateID; templateName = name; templateRevision = revision
         payloadData = try TemplateCodec.encode(payload)
     }
+
+    /// Restoration path for backups: the payload bytes are already validated and may
+    /// intentionally be preserved verbatim when they cannot be decoded by this version.
+    init(id: UUID, templateID: UUID?, name: String, revision: Int, payloadData: Data?) {
+        self.id = id
+        self.templateID = templateID
+        templateName = name
+        templateRevision = revision
+        self.payloadData = payloadData
+    }
     var payload: TemplatePayload? { TemplateCodec.decode(TemplatePayload.self, data: payloadData) }
 }
 

@@ -33,5 +33,6 @@ struct ReminderReconciliation: ViewModifier {
                 ReminderCoordinator.request(context)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in ReminderCoordinator.request(context) }
+            .onReceive(NotificationCenter.default.publisher(for: .selnoReminderNeedsReconcile)) { _ in ReminderCoordinator.request(context) }
     }
 }
